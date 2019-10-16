@@ -50,3 +50,56 @@ def calculate_cost(solution: Solution, settings: Settings) -> float:
     duties_cost = np.sum(solution.goods_allocation * settings.duties[solution.trucks_allocation, :])
     fuel_cost = np.sum(settings.fuel_cost * settings.distances[solution.trucks_allocation])
     return duties_cost + fuel_cost
+
+
+# ==========================================================
+#  RANDOM SOLUTION GENERATION
+# ==========================================================
+def generate_random_truck_allocation(settings: Settings) -> np.ndarray:
+    """ Generates random truck """
+    return np.random.randint(low=0, high=settings.crossings_number, size=settings.trucks_number)
+
+
+def generate_random_goods_allocation(settings: Settings) -> np.ndarray:
+    """ Generates random goods allocation that meets restrictions (1, 2) """
+
+    # check if there exists any proper allocation
+    if settings.trucks_number * settings.truck_capacity < settings.goods_amounts.sum():
+        raise ValueError('Total amount of goods exceeds total capacity of trucks, therefore no solution exists')
+
+    # generate random array
+    allocation = np.random.rand(settings.trucks_number, settings.goods_types_number)
+
+    # ensure that restriction 2 is meet by normalizing columns so that sums of columns match total amount of goods
+    allocation /= allocation.sum(axis=0)
+    allocation *= settings.goods_amounts
+
+    # ensure that restriction 1 is meet by by moving goods from overloaded trucks to the most empty trucks
+    while np.any(allocation.sum(axis=1) > settings.truck_capacity):
+        # find the most and the least loaded trucks
+        sums = allocation.sum(axis=1)
+        k1 = sums.argmax()
+        k2 = sums.argmin()
+        # select which of the goods to move
+        j = allocation[k1].argmax()
+        # calculate how much to move between trucks
+        amount = min(allocation[k1, j], sums[k1]-settings.truck_capacity)
+        # move from k1-th truck to k2-truck
+        allocation[k1, j] -= amount
+        allocation[k2, j] += amount
+
+    return allocation
+
+
+def generate_random_solution(settings: Settings) -> Solution:
+    """ Generates random solution that meets restrictions """
+    solution = Solution(
+        trucks_allocation=generate_random_truck_allocation(settings),
+        goods_allocation=generate_random_goods_allocation(settings)
+    )
+
+    # ensure that generates solution meets restrictions
+    if not validate_solution(solution, settings):
+        raise RuntimeError('Generated solution does not meet restrictions')
+
+    return solution
