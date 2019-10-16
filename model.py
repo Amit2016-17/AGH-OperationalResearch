@@ -29,12 +29,12 @@ class Solution(NamedTuple):
 # ==========================================================
 def validate_trucks_capacity(solution: Solution, settings: Settings) -> bool:
     """ Validates (1): each truck has a sum of goods less or equal to truck capacity """
-    return all(solution.goods_allocation.sum(axis=1) <= settings.truck_capacity)
+    return np.all(solution.goods_allocation.sum(axis=1) <= settings.truck_capacity)
 
 
 def validate_goods_total(solution: Solution, settings: Settings) -> bool:
     """ Validates (2): sum of goods of specific type across all trucks has to be equal to goods amount of this type """
-    return all(solution.goods_allocation.sum(axis=0) == settings.goods_amounts)
+    return np.allclose(solution.goods_allocation.sum(axis=0), settings.goods_amounts)
 
 
 def validate_solution(solution: Solution, settings: Settings) -> bool:
