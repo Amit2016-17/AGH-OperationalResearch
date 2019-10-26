@@ -12,7 +12,7 @@ class Settings(NamedTuple):
     crossings_number: int           # n - number of border crossings
     goods_types_number: int         # m - number of types of goods
     trucks_number: int              # p - number of available trucks
-    truck_capacity: float           # v - capacity of single truck, in kg
+    truck_capacity: int             # v - capacity of single truck, in kg
     fuel_cost: float                # f - cost of fuel for single truck for one km
     duties: np.ndarray              # c - array of shape (n, m) that defines duties
     distances: np.ndarray           # d - array of shape (n) that defines distance in km to crossings
@@ -35,7 +35,7 @@ def validate_trucks_capacity(solution: Solution, settings: Settings) -> bool:
 
 def validate_goods_total(solution: Solution, settings: Settings) -> bool:
     """ Validates (2): sum of goods of specific type across all trucks has to be equal to goods amount of this type """
-    return np.allclose(solution.goods_allocation.sum(axis=0), settings.goods_amounts)
+    return np.all(solution.goods_allocation.sum(axis=0) == settings.goods_amounts)
 
 
 def validate_solution(solution: Solution, settings: Settings) -> bool:
@@ -68,12 +68,15 @@ def generate_random_goods_allocation(settings: Settings) -> np.ndarray:
     if settings.trucks_number * settings.truck_capacity < settings.goods_amounts.sum():
         raise ValueError('Total amount of goods exceeds total capacity of trucks, therefore no solution exists')
 
-    # generate random array
-    allocation = np.random.rand(settings.trucks_number, settings.goods_types_number)
+    # generate empty array
+    allocation = np.empty((settings.trucks_number, settings.goods_types_number))
 
-    # ensure that restriction 2 is meet by normalizing columns so that sums of columns match total amount of goods
-    allocation /= allocation.sum(axis=0)
-    allocation *= settings.goods_amounts
+    # ensure that restriction 2 is meet by generating values using multinomial distribution
+    for i in range(settings.goods_types_number):
+        allocation[:, i] = np.random.multinomial(
+            settings.goods_amounts[i],
+            np.ones(settings.trucks_number)/settings.trucks_number
+        )
 
     # ensure that restriction 1 is meet by by moving goods from overloaded trucks to the most empty trucks
     while np.any(allocation.sum(axis=1) > settings.truck_capacity):
@@ -119,7 +122,7 @@ def generate_random_settings(**kwargs) -> Settings:
     if 'trucks_number' not in kwargs:
         kwargs['trucks_number'] = random.randint(2, 10)
     if 'truck_capacity' not in kwargs:
-        kwargs['truck_capacity'] = random.uniform(10.0, 30.0)
+        kwargs['truck_capacity'] = random.randint(10, 30)
     if 'fuel_cost' not in kwargs:
         kwargs['fuel_cost'] = random.uniform(0.1, 10.0)
     if 'duties' not in kwargs:
@@ -127,6 +130,6 @@ def generate_random_settings(**kwargs) -> Settings:
     if 'distances' not in kwargs:
         kwargs['distances'] = np.random.uniform(1.0, 50.0, kwargs['crossings_number'])
     if 'goods_amounts' not in kwargs:
-        kwargs['goods_amounts'] = np.random.uniform(1.0, 20.0, kwargs['goods_types_number'])
+        kwargs['goods_amounts'] = np.random.randint(1, 20, kwargs['goods_types_number'])
 
     return Settings(**kwargs)

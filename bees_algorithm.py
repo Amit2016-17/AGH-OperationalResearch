@@ -21,23 +21,23 @@ def mutate_goods_allocation(solution: Solution, settings: Settings):
     # calculate free space in each truck
     spaces = settings.truck_capacity - solution.goods_allocation.sum(axis=1)
 
-    # select random truck that has free space
-    t_to = random.choice(np.argwhere(spaces > 0).flatten())
-
     # select random column - goods type
     k = random.randrange(settings.goods_types_number)
 
-    # select random truck to take the goods from
-    t_from = random.randrange(settings.trucks_number)
+    # select random truck that has free space
+    t_to = random.choice(np.argwhere(spaces > 0).flatten())
+
+    # select random truck that has some goods of type k
+    t_from = random.choice(np.argwhere(solution.goods_allocation[:, k] > 0).flatten())
 
     # calculate how much can be moved of this type between these trucks
     max_amount = min(
         solution.goods_allocation[t_from, k],    # available goods in truck that we take from
-        settings.truck_capacity - spaces[t_to],  # available space in truck that we put
+        spaces[t_to],  # available space in truck that we put
     )
 
     # move random amount
-    amount = random.uniform(0.0, max_amount)
+    amount = random.randint(1, max_amount)
     solution.goods_allocation[t_from, k] -= amount
     solution.goods_allocation[t_to, k] += amount
 
