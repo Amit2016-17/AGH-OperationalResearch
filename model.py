@@ -1,3 +1,4 @@
+import random
 from typing import NamedTuple
 
 import numpy as np
@@ -53,7 +54,7 @@ def calculate_cost(solution: Solution, settings: Settings) -> float:
 
 
 # ==========================================================
-#  RANDOM SOLUTION GENERATION
+#  RANDOM GENERATION
 # ==========================================================
 def generate_random_truck_allocation(settings: Settings) -> np.ndarray:
     """ Generates random truck """
@@ -103,3 +104,29 @@ def generate_random_solution(settings: Settings) -> Solution:
         raise RuntimeError('Generated solution does not meet restrictions')
 
     return solution
+
+
+def generate_random_settings(**kwargs) -> Settings:
+    """
+    Creates settings object using given values and randomly generating missing ones.
+    Does not perform ant checks therefore our problem can have no solution for generated settings.
+    """
+
+    if 'crossings_number' not in kwargs:
+        kwargs['crossings_number'] = random.randint(2, 10)
+    if 'goods_types_number' not in kwargs:
+        kwargs['goods_types_number'] = random.randint(2, 10)
+    if 'trucks_number' not in kwargs:
+        kwargs['trucks_number'] = random.randint(2, 10)
+    if 'truck_capacity' not in kwargs:
+        kwargs['truck_capacity'] = random.uniform(10.0, 30.0)
+    if 'fuel_cost' not in kwargs:
+        kwargs['fuel_cost'] = random.uniform(0.1, 10.0)
+    if 'duties' not in kwargs:
+        kwargs['duties'] = np.random.uniform(0.1, 10.0, (kwargs['crossings_number'], kwargs['goods_types_number']))
+    if 'distances' not in kwargs:
+        kwargs['distances'] = np.random.uniform(1.0, 50.0, kwargs['crossings_number'])
+    if 'goods_amounts' not in kwargs:
+        kwargs['goods_amounts'] = np.random.uniform(1.0, 20.0, kwargs['goods_types_number'])
+
+    return Settings(**kwargs)
