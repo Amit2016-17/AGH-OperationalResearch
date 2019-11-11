@@ -1,14 +1,13 @@
 import random
 import copy
-from abc import abstractmethod, ABC
-from typing import List
+from typing import List, Callable
 
 import numpy as np
 
 from model import Solution, Settings, calculate_cost, generate_random_solution
 
 
-class BeesSolver(ABC):
+class BeesSolver:
     """ Solver that uses bees algorithm to solve our problem. """
 
     def __init__(self, settings: Settings, population_size: int,
@@ -35,6 +34,8 @@ class BeesSolver(ABC):
         self.normal_sites = normal_sites
         self.elite_site_size = elite_site_size
         self.normal_site_size = normal_site_size
+
+        self.population: List[Solution] = []
 
     def _mutate_trucks_allocation(self, solution: Solution):
         """
@@ -104,79 +105,64 @@ class BeesSolver(ABC):
         # find and return best neighbour
         return sorted(neighbours, key=lambda sol: calculate_cost(sol, self.settings))[0]
 
-    def _simulate_population(self, population: List[Solution]) -> List[Solution]:
-        """
-        Applies one step of bees algorithm by creating new population out of the given one.
-
-        :param population: population to simulate
-        :return: generated population
-        """
+    def simulate_population(self):
+        """ Applies one step of bees algorithm. """
 
         # sort population
-        population.sort(key=lambda sol: calculate_cost(sol, self.settings))
+        self.population.sort(key=lambda sol: calculate_cost(sol, self.settings))
 
         # find best neighbours in elite sites
         for i in range(0, self.elite_sites):
-            population[i] = self._find_best_neighbour(population[i], self.elite_site_size)
+            self.population[i] = self._find_best_neighbour(self.population[i], self.elite_site_size)
 
         # find best neighbours in normal sites
         for i in range(self.elite_sites, self.elite_sites + self.normal_sites):
-            population[i] = self._find_best_neighbour(population[i], self.normal_site_size)
+            self.population[i] = self._find_best_neighbour(self.population[i], self.normal_site_size)
 
         # replace all other solutions with random ones
-        for i in range(self.elite_sites + self.normal_sites, len(population)):
-            population[i] = generate_random_solution(self.settings)
+        for i in range(self.elite_sites + self.normal_sites, len(self.population)):
+            self.population[i] = generate_random_solution(self.settings)
 
-        return population
+    def init_population(self):
+        """ Generates random population. """
+        self.population = [generate_random_solution(self.settings) for _ in range(self.population_size)]
 
-    def find_best_solution(self) -> Solution:
+    def current_cost(self) -> float:
+        """ Returns current cost of first solution from population. """
+        return calculate_cost(self.population[0], self.settings)
+
+    def find_best_solution(self, stop_func: Callable[[int, float, float], bool]) -> Solution:
         """
         Finds best solution using this solver.
 
+        :param stop_func: function that receives loops count, last cost and new cost and returns true if iteration
+                process should stop
         :return: found solution
         """
         loops = 0
-
-        # generate random population
-        population = [generate_random_solution(self.settings) for _ in range(self.population_size)]
-
-        # simulate generations while there is an improvement
         last_cost = float('inf')
-        while not self._stop_condition(loops, last_cost, calculate_cost(population[0], self.settings)):
+
+        # create random population
+        self.init_population()
+
+        # while stop function returns true simulate population
+        while not stop_func(loops, last_cost, self.current_cost()):
             loops += 1
-            last_cost = calculate_cost(population[0], self.settings)
+            last_cost = self.current_cost()
+            self.simulate_population()
 
-            population = self._simulate_population(population)
-
-        # return best solution from population
-        return population[0]
-
-    @abstractmethod
-    def _stop_condition(self, i: int, last_cost: float, new_cost: float):
-        pass
+        return self.population[0]
 
 
-class IterationsBeesSolver(BeesSolver):
-    """ Bees solver that uses iteration count as stop condition. """
-
-    def __init__(self, settings: Settings, iterations: int, population_size: int, goods_mutations: int, trucks_mutations: int,
-                 elite_sites: int, normal_sites: int, elite_site_size: int, normal_site_size: int):
-        super().__init__(settings, population_size, goods_mutations, trucks_mutations, elite_sites, normal_sites,
-                         elite_site_size, normal_site_size)
-        self.iterations = iterations
-
-    def _stop_condition(self, i: int, last_cost: float, new_cost: float):
-        return i > self.iterations
+def stop_delta(delta: float):
+    """ Creates stop function that stops when change in cost is lower than delta. """
+    def stop_func(last_cost: float, new_cost: float):
+        return last_cost - new_cost < delta
+    return stop_func
 
 
-class DeltaBeesSolver(BeesSolver):
-    """ Bees solver that uses cost change delta as stop condition. """
-
-    def __init__(self, settings: Settings, delta: int, population_size: int, goods_mutations: int, trucks_mutations: int,
-                 elite_sites: int, normal_sites: int, elite_site_size: int, normal_site_size: int):
-        super().__init__(settings, population_size, goods_mutations, trucks_mutations, elite_sites, normal_sites,
-                         elite_site_size, normal_site_size)
-        self.delta = delta
-
-    def _stop_condition(self, i: int, last_cost: float, new_cost: float):
-        return last_cost - new_cost < self.delta
+def stop_iterations(iterations: int):
+    """ Creates stop function that stops after certain number of loops. """
+    def stop_func(loops: int, last_cost: float, new_cost: float):
+        return loops >= iterations
+    return stop_func
