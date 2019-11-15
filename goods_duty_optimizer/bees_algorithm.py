@@ -4,7 +4,7 @@ from typing import List, Callable
 
 import numpy as np
 
-from model import Solution, Settings, calculate_cost, generate_random_solution
+from .model import Solution, Settings, calculate_cost, generate_random_solution
 
 
 class BeesSolver:
