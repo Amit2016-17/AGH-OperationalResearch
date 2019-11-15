@@ -12,10 +12,10 @@ class Settings(NamedTuple):
     crossings_number: int           # n - number of border crossings
     goods_types_number: int         # m - number of types of goods
     trucks_number: int              # p - number of available trucks
-    truck_capacity: int             # v - capacity of single truck, in kg
-    fuel_cost: float                # f - cost of fuel for single truck for one km
+    truck_capacity: int             # v - capacity of single truck
+    fuel_cost: float                # f - cost of fuel for single truck for one unit of distance
     duties: np.ndarray              # c - array of shape (n, m) that defines duties
-    distances: np.ndarray           # d - array of shape (n) that defines distance in km to crossings
+    distances: np.ndarray           # d - array of shape (n) that defines distance to crossings
     goods_amounts: np.ndarray       # t - array of shape (m) that defines amounts available goods
 
 

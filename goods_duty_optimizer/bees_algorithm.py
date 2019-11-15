@@ -156,7 +156,7 @@ class BeesSolver:
 
 def stop_delta(delta: float):
     """ Creates stop function that stops when change in cost is lower than delta. """
-    def stop_func(last_cost: float, new_cost: float):
+    def stop_func(loops: int, last_cost: float, new_cost: float):
         return last_cost - new_cost < delta
     return stop_func
 
